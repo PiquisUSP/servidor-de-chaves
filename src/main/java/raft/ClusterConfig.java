@@ -64,6 +64,11 @@ public final class ClusterConfig {
         return PORTA_RMI.get(id);
     }
 
+    /** Diretório em disco com o log e os snapshots deste nó. */
+    public static File diretorioStorage(String id) {
+        return new File("raft-storage", id);
+    }
+
     /** Constrói o grupo Raft com todos os peers configurados. */
     public static RaftGroup grupo() {
         List<RaftPeer> peers = new ArrayList<>();
@@ -83,8 +88,12 @@ public final class ClusterConfig {
         RaftConfigKeys.Rpc.setType(props, SupportedRpcType.GRPC);
         GrpcConfigKeys.Server.setPort(props, portaRaft(id));
 
-        File storageDir = new File("raft-storage", id);
-        RaftServerConfigKeys.setStorageDir(props, Collections.singletonList(storageDir));
+        RaftServerConfigKeys.setStorageDir(props, Collections.singletonList(diretorioStorage(id)));
+
+        // Snapshots automáticos: a cada N entradas aplicadas, a StateMachine grava
+        // o estado em disco (persistência) e o log pode ser compactado.
+        RaftServerConfigKeys.Snapshot.setAutoTriggerEnabled(props, true);
+        RaftServerConfigKeys.Snapshot.setAutoTriggerThreshold(props, 10L);
 
         return props;
     }

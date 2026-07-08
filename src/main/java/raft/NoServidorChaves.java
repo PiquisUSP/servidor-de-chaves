@@ -1,11 +1,13 @@
 package raft;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.server.RaftServer;
+import org.apache.ratis.server.storage.RaftStorage;
 
 import estruturas.db.BancoDeDados;
 
@@ -37,10 +39,21 @@ public class NoServidorChaves implements AutoCloseable {
 
         RaftGroup grupo = ClusterConfig.grupo();
 
+        // Se já existe storage em disco deste nó, RECUPERA (restart); senão,
+        // FORMATA (primeira vez). Sem isso, um restart tentaria formatar por cima
+        // de um storage existente e falharia.
+        File storageDir = ClusterConfig.diretorioStorage(id);
+        boolean temStorage = storageDir.isDirectory()
+                && storageDir.list() != null && storageDir.list().length > 0;
+        RaftStorage.StartupOption opcao = temStorage
+                ? RaftStorage.StartupOption.RECOVER
+                : RaftStorage.StartupOption.FORMAT;
+
         // RaftServer: o motor do Raft, com nossa StateMachine sobre o BancoDeDados.
         this.raftServer = RaftServer.newBuilder()
                 .setServerId(RaftPeerId.valueOf(id))
                 .setGroup(grupo)
+                .setOption(opcao)
                 .setProperties(ClusterConfig.propriedadesServidor(id))
                 .setStateMachine(new ServidorChavesStateMachine(db))
                 .build();

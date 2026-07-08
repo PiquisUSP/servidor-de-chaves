@@ -1,6 +1,14 @@
 package raft;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Map;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.ratis.proto.RaftProtos.LogEntryProto;
@@ -8,10 +16,15 @@ import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.server.RaftServer;
+import org.apache.ratis.server.protocol.TermIndex;
+import org.apache.ratis.server.raftlog.RaftLog;
 import org.apache.ratis.server.storage.RaftStorage;
+import org.apache.ratis.statemachine.SnapshotInfo;
+import org.apache.ratis.statemachine.StateMachineStorage;
 import org.apache.ratis.statemachine.TransactionContext;
 import org.apache.ratis.statemachine.impl.BaseStateMachine;
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
+import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,9 +51,10 @@ import estruturas.db.exceptions.chave.ChaveJaRegistrada;
  *       líder devolve o status ao cliente.</li>
  * </ol>
  *
- * <p><b>Snapshots:</b> não implementados (o log é reproduzido do início ao
- * reiniciar). Suficiente para o cenário atual; para logs muito grandes,
- * implementar {@code takeSnapshot()}/carregamento de snapshot.
+ * <p><b>Persistência em disco:</b> o log do Raft já é gravado em disco pelo Ratis;
+ * além dele, {@link #takeSnapshot()} grava periodicamente o estado do banco num
+ * snapshot, e {@link #initialize}/{@link #reinitialize} o recarregam ao subir.
+ * Assim o estado sobrevive à queda/reinício dos nós e o log pode ser compactado.
  */
 public class ServidorChavesStateMachine extends BaseStateMachine {
 
@@ -59,6 +73,28 @@ public class ServidorChavesStateMachine extends BaseStateMachine {
     public void initialize(RaftServer server, RaftGroupId groupId, RaftStorage raftStorage) throws IOException {
         super.initialize(server, groupId, raftStorage);
         this.storage.init(raftStorage);
+        carregarSnapshot(storage.getLatestSnapshot());
+    }
+
+    @Override
+    public void reinitialize() throws IOException {
+        carregarSnapshot(storage.getLatestSnapshot());
+    }
+
+    /**
+     * Expõe o storage ao servidor. Sem isto, o Ratis não sabe que existem
+     * snapshots e reproduz o log desde o início ao reiniciar — conflitando com o
+     * estado já restaurado do snapshot.
+     */
+    @Override
+    public StateMachineStorage getStateMachineStorage() {
+        return storage;
+    }
+
+    /** Informa ao servidor o snapshot mais recente (até onde o estado já foi persistido). */
+    @Override
+    public SnapshotInfo getLatestSnapshot() {
+        return storage.getLatestSnapshot();
     }
 
     /**
@@ -104,5 +140,56 @@ public class ServidorChavesStateMachine extends BaseStateMachine {
         LOG.info("[applyTransaction] index={} {} -> {}", entry.getIndex(), comando, status);
 
         return CompletableFuture.completedFuture(Message.valueOf(Integer.toString(status)));
+    }
+
+    /**
+     * Grava o estado atual do banco num arquivo de snapshot, nomeado pelo
+     * (term, index) da última entrada aplicada. Chamado pelo Ratis periodicamente
+     * (ver auto-trigger em {@code ClusterConfig}).
+     *
+     * @return o índice até o qual este snapshot cobre o log.
+     */
+    @Override
+    public long takeSnapshot() {
+        final TermIndex ultimo = getLastAppliedTermIndex();
+        final Map<String, ContaBancaria> copia = db.snapshot();
+
+        final File arquivo = storage.getSnapshotFile(ultimo.getTerm(), ultimo.getIndex());
+        LOG.info("[takeSnapshot] gravando snapshot {} ({} chaves)", arquivo.getName(), copia.size());
+
+        try (ObjectOutputStream out = new ObjectOutputStream(
+                new BufferedOutputStream(new FileOutputStream(arquivo)))) {
+            out.writeObject(copia);
+        } catch (IOException e) {
+            LOG.warn("[takeSnapshot] falha ao gravar snapshot {}", arquivo, e);
+        }
+
+        return ultimo.getIndex();
+    }
+
+    /** Recarrega o estado do banco a partir do snapshot mais recente (se houver). */
+    @SuppressWarnings("unchecked")
+    private long carregarSnapshot(SingleFileSnapshotInfo snapshot) throws IOException {
+        if (snapshot == null) {
+            return RaftLog.INVALID_LOG_INDEX;
+        }
+        final File arquivo = snapshot.getFile().getPath().toFile();
+        if (!arquivo.exists()) {
+            return RaftLog.INVALID_LOG_INDEX;
+        }
+
+        final TermIndex ultimo = SimpleStateMachineStorage.getTermIndexFromSnapshotFile(arquivo);
+        try (ObjectInputStream in = new ObjectInputStream(
+                new BufferedInputStream(new FileInputStream(arquivo)))) {
+            Map<String, ContaBancaria> dados = (Map<String, ContaBancaria>) in.readObject();
+            db.restaurar(dados);
+            setLastAppliedTermIndex(ultimo);
+            LOG.info("[carregarSnapshot] restaurado do snapshot index={} ({} chaves)",
+                    ultimo.getIndex(), dados.size());
+        } catch (ClassNotFoundException e) {
+            throw new IOException("Snapshot corrompido: " + arquivo, e);
+        }
+
+        return ultimo.getIndex();
     }
 }
