@@ -5,7 +5,6 @@ import java.rmi.server.UnicastRemoteObject;
 
 import estruturas.conta.ContaBancaria;
 import estruturas.db.BancoDeDados;
-import estruturas.chave.Chave;
 
 import rmi.ConsultaChaveInterface;
 
@@ -22,7 +21,7 @@ public class ConsultaChaveService extends UnicastRemoteObject implements Consult
 
     @Override
     public ServiceResult consultarChave(String valor) throws RemoteException {
-        ContaBancaria conta = db.RecuperarContaBancaria(new Chave(valor));
+        ContaBancaria conta = db.RecuperarContaBancariaPorValor(valor);
 
         if(conta != null){
             return new ContaBancariaResult(conta);

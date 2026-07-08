@@ -1,6 +1,11 @@
 package estruturas.instituicao;
 
-public class IdentificadorInstituicao {
+import java.io.Serializable;
+
+// Serializable: faz parte da ContaBancaria retornada por RMI.
+public class IdentificadorInstituicao implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     protected String valor;
 
     public IdentificadorInstituicao(String valor) {

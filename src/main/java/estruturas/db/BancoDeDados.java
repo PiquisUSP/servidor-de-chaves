@@ -6,7 +6,7 @@ import estruturas.conta.ContaBancaria;
 import estruturas.db.exceptions.chave.ChaveJaRegistrada;
 
 public class BancoDeDados {
-    private ConcurrentHashMap<Chave, ContaBancaria> contasBancarias = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, ContaBancaria> contasBancarias = new ConcurrentHashMap<>();
 
     public BancoDeDados() {
         this.CarregarDados();
@@ -17,17 +17,27 @@ public class BancoDeDados {
     }
 
     public void AdicionarContaBancaria(Chave chave, ContaBancaria contaBancaria) throws ChaveJaRegistrada {
-        if (this.contasBancarias.containsKey(chave)) {
+        if (this.contasBancarias.containsKey(chave.getValor())) {
             throw new ChaveJaRegistrada();
         }
-        this.contasBancarias.put(chave, contaBancaria);
+        this.contasBancarias.put(chave.getValor(), contaBancaria);
     }
 
     public ContaBancaria RecuperarContaBancaria(Chave chave) {
-        return this.contasBancarias.get(chave);
+        if (chave == null || chave.getValor() == null) {
+            return null;
+        }
+        return this.contasBancarias.get(chave.getValor());
     }
 
-    public boolean ExisteChaveRegistrada(String chave){
-        return this.contasBancarias.containsKey(chave);
+    public ContaBancaria RecuperarContaBancariaPorValor(String valor) {
+        if (valor == null) {
+            return null;
+        }
+        return this.contasBancarias.get(valor);
+    }
+
+    public boolean ExisteChaveRegistrada(String valor){
+        return valor != null && this.contasBancarias.containsKey(valor);
     }
 }

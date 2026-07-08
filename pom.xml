@@ -44,6 +44,14 @@
             <artifactId>ratis-grpc</artifactId>
             <version>${ratis.version}</version>
         </dependency>
+        <!-- ratis-metrics-default: implementacao de metricas carregada em runtime
+             (o ratis-server so traz a API; sem isto: ClassNotFound MetricRegistriesImpl) -->
+        <dependency>
+            <groupId>org.apache.ratis</groupId>
+            <artifactId>ratis-metrics-default</artifactId>
+            <version>${ratis.version}</version>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- Binding SLF4J para visualizar os logs do Raft (eleicao de lider, etc.) -->
         <dependency>

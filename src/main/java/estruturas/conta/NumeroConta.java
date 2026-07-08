@@ -1,6 +1,11 @@
 package estruturas.conta;
 
-public class NumeroConta {
+import java.io.Serializable;
+
+// Serializable: faz parte da ContaBancaria retornada por RMI.
+public class NumeroConta implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     protected String valor;
 
     public NumeroConta(String valor) {

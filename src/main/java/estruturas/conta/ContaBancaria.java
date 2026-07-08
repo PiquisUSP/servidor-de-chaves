@@ -1,9 +1,14 @@
 package estruturas.conta;
 
+import java.io.Serializable;
+
 import estruturas.instituicao.IdentificadorInstituicao;
 import estruturas.conta.NumeroConta;
 
-public class ContaBancaria {
+// Serializable: viaja dentro do ContaBancariaResult retornado por RMI.
+public class ContaBancaria implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     protected IdentificadorInstituicao id;
     protected NumeroConta numeroConta;
 
