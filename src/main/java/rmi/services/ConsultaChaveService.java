@@ -3,6 +3,9 @@ package rmi.services;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import estruturas.conta.ContaBancaria;
 import estruturas.db.BancoDeDados;
 
@@ -12,6 +15,9 @@ import rmi.services.result.ContaBancariaResult;
 import rmi.services.result.ServiceResult;
 
 public class ConsultaChaveService extends UnicastRemoteObject implements ConsultaChaveInterface {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ConsultaChaveService.class);
+
     private BancoDeDados db;
 
     public ConsultaChaveService(BancoDeDados db) throws RemoteException {
@@ -41,6 +47,8 @@ public class ConsultaChaveService extends UnicastRemoteObject implements Consult
 
     @Override
     public boolean existeChave(String valor) throws RemoteException {
-        return db.ExisteChaveRegistrada(valor);
+        boolean existe = db.ExisteChaveRegistrada(valor);
+        LOG.info("[RMI] existeChave(valor={}) -> {}", valor, existe);
+        return existe;
     }
 }
