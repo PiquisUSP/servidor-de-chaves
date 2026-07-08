@@ -62,8 +62,23 @@ public final class ClusterConfig {
         return new ArrayList<>(PORTA_RAFT.keySet());
     }
 
+    /**
+     * Porta do registry RMI deste nó. Local: per-nó (1099/1100/1101). Em K8s,
+     * defina {@code RMI_PORT} igual em todos os pods (mesma porta) para um Service
+     * conseguir balancear entre eles.
+     */
     public static int portaRmi(String id) {
-        return PORTA_RMI.get(id);
+        return portaConfiguravel("RMI_PORT", PORTA_RMI.get(id));
+    }
+
+    /** Porta do transporte Raft deste nó (per-nó local; {@code RAFT_PORT} uniformiza em K8s). */
+    public static int portaRaft(String id) {
+        return portaConfiguravel("RAFT_PORT", PORTA_RAFT.get(id));
+    }
+
+    private static int portaConfiguravel(String envVar, int padrao) {
+        String env = System.getenv(envVar);
+        return (env != null && !env.isBlank()) ? Integer.parseInt(env.trim()) : padrao;
     }
 
     /** Diretório em disco com o log e os snapshots deste nó. */
@@ -81,7 +96,7 @@ public final class ClusterConfig {
     }
 
     private static String enderecoRaft(String id) {
-        return host(id) + ":" + PORTA_RAFT.get(id);
+        return host(id) + ":" + portaRaft(id);
     }
 
     /** Constrói o grupo Raft com todos os peers configurados. */
@@ -101,7 +116,7 @@ public final class ClusterConfig {
         RaftProperties props = new RaftProperties();
 
         RaftConfigKeys.Rpc.setType(props, SupportedRpcType.GRPC);
-        GrpcConfigKeys.Server.setPort(props, PORTA_RAFT.get(id));
+        GrpcConfigKeys.Server.setPort(props, portaRaft(id));
 
         RaftServerConfigKeys.setStorageDir(props, Collections.singletonList(diretorioStorage(id)));
 

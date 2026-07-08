@@ -36,9 +36,11 @@ public class Main {
             int portaRmi = ClusterConfig.portaRmi(id);
             Registry registry = LocateRegistry.createRegistry(portaRmi);
 
+            // Exporta os objetos na MESMA porta do registry (fixa) — assim só uma
+            // porta precisa ser exposta e o RMI atravessa Service/LoadBalancer do K8s.
             // Escritas -> Raft; Leituras -> banco replicado local deste nó.
-            registry.rebind("RegistroChave", new RegistroChaveService(no.aplicador()));
-            registry.rebind("ConsultaChave", new ConsultaChaveService(no.banco()));
+            registry.rebind("RegistroChave", new RegistroChaveService(no.aplicador(), portaRmi));
+            registry.rebind("ConsultaChave", new ConsultaChaveService(no.banco(), portaRmi));
 
             System.out.printf("Nó '%s' iniciado: Raft (gRPC) + RMI na porta %d.%n", id, portaRmi);
             System.out.println("Aguardando eleição de líder (precisa de maioria dos nós no ar)...");

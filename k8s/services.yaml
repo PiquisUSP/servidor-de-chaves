@@ -1,0 +1,48 @@
+# Headless Service — dá DNS estável a cada pod do StatefulSet:
+#   servidor-chaves-0.servidor-chaves-hl, ...-1..., ...-2...
+# É por esses nomes que os nós Raft se encontram (e os clientes RMI no cluster
+# alcançam um pod específico). clusterIP: None = sem VIP, resolve para os pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: servidor-chaves-hl
+  labels:
+    app: servidor-chaves
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true   # DNS resolve durante a subida (antes de "ready")
+  selector:
+    app: servidor-chaves
+  ports:
+    - name: rmi
+      port: 1099
+      targetPort: rmi
+    - name: raft
+      port: 6000
+      targetPort: raft
+---
+# LoadBalancer — expõe o RMI para clientes externos.
+#
+# Observações sobre RMI atrás de LB:
+#  - sessionAffinity: ClientIP prende cada cliente a um pod (os stubs RMI carregam
+#    um ObjID por objeto/JVM; alternar de pod no meio quebraria as chamadas).
+#  - Como as escritas passam pelo Raft, qualquer pod pode atender (encaminha ao líder),
+#    então distribuir clientes entre os pods é seguro para a consistência.
+#  - Para o RMI externo funcionar de fato, o `java.rmi.server.hostname` precisa ser o
+#    endereço do LB (o StatefulSet usa o DNS do pod, ideal para clientes DENTRO do
+#    cluster). Veja a nota no README.
+apiVersion: v1
+kind: Service
+metadata:
+  name: servidor-chaves-rmi
+  labels:
+    app: servidor-chaves
+spec:
+  type: LoadBalancer
+  sessionAffinity: ClientIP
+  selector:
+    app: servidor-chaves
+  ports:
+    - name: rmi
+      port: 1099
+      targetPort: rmi

@@ -35,6 +35,16 @@ public class RegistroChaveService extends UnicastRemoteObject implements Registr
     }
 
     /**
+     * Exporta o objeto numa porta fixa (em vez de aleatória). Necessário para o
+     * RMI atravessar um Service/LoadBalancer do Kubernetes, que só encaminha
+     * portas conhecidas. Use a mesma porta do registry.
+     */
+    public RegistroChaveService(AplicadorDeChaves aplicador, int portaExport) throws RemoteException {
+        super(portaExport);
+        this.aplicador = aplicador;
+    }
+
+    /**
      * Modo local (sem replicação). Mantido por compatibilidade: aplica direto num
      * {@link BancoDeDados}, como o servidor fazia antes do Raft.
      */

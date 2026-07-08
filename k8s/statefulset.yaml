@@ -1,0 +1,83 @@
+# StatefulSet do cluster Raft.
+#
+# Por que StatefulSet (e não Deployment): cada nó precisa de identidade de rede
+# estável (nome/DNS fixo) e disco próprio persistente. O StatefulSet dá pods com
+# nomes ordenados (servidor-chaves-0/-1/-2) e um PVC por pod.
+#
+# Mapeamento pod -> id do nó: o ordinal do pod vira n1/n2/n3
+#   servidor-chaves-0 -> n1, servidor-chaves-1 -> n2, servidor-chaves-2 -> n3
+# Os RAFT_HOST_* apontam para o DNS de cada pod (via headless Service).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: servidor-chaves
+  labels:
+    app: servidor-chaves
+spec:
+  serviceName: servidor-chaves-hl
+  replicas: 3                     # fixo em 3 (a config conhece n1/n2/n3)
+  podManagementPolicy: Parallel   # sobe os 3 juntos — precisam se ver p/ eleger líder
+  selector:
+    matchLabels:
+      app: servidor-chaves
+  template:
+    metadata:
+      labels:
+        app: servidor-chaves
+    spec:
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: servidor-chaves
+          image: servidor-de-chaves:latest
+          imagePullPolicy: IfNotPresent
+          # Deriva o id do nó do ordinal do pod e anuncia o DNS do próprio pod
+          # para o RMI (assim clientes no cluster alcançam este pod).
+          command: ["sh", "-c"]
+          args:
+            - |
+              ORD="${POD_NAME##*-}"
+              NODE="n$((ORD + 1))"
+              echo "pod=$POD_NAME -> node=$NODE"
+              exec java \
+                -Djava.rmi.server.hostname="${POD_NAME}.servidor-chaves-hl" \
+                $JAVA_OPTS \
+                -cp "classes:lib/*" Main "$NODE"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # Portas uniformes em todos os pods (um Service consegue balancear).
+            - name: RMI_PORT
+              value: "1099"
+            - name: RAFT_PORT
+              value: "6000"
+            # Peers: DNS estável de cada pod pelo headless Service.
+            - name: RAFT_HOST_N1
+              value: servidor-chaves-0.servidor-chaves-hl
+            - name: RAFT_HOST_N2
+              value: servidor-chaves-1.servidor-chaves-hl
+            - name: RAFT_HOST_N3
+              value: servidor-chaves-2.servidor-chaves-hl
+          ports:
+            - name: rmi
+              containerPort: 1099
+            - name: raft
+              containerPort: 6000
+          readinessProbe:
+            tcpSocket:
+              port: rmi
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: raft-storage
+              mountPath: /app/raft-storage
+  # Um PVC por pod: o log + snapshots do Raft persistem por nó.
+  volumeClaimTemplates:
+    - metadata:
+        name: raft-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

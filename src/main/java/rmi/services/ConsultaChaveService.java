@@ -19,6 +19,15 @@ public class ConsultaChaveService extends UnicastRemoteObject implements Consult
         this.db = db;
     }
 
+    /**
+     * Exporta o objeto numa porta fixa (em vez de aleatória). Necessário para o
+     * RMI atravessar um Service/LoadBalancer do Kubernetes. Use a mesma porta do registry.
+     */
+    public ConsultaChaveService(BancoDeDados db, int portaExport) throws RemoteException {
+        super(portaExport);
+        this.db = db;
+    }
+
     @Override
     public ServiceResult consultarChave(String valor) throws RemoteException {
         ContaBancaria conta = db.RecuperarContaBancariaPorValor(valor);

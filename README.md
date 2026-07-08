@@ -182,6 +182,53 @@ docker run --rm servidor-de-chaves n1
 
 ---
 
+## Rodar no Kubernetes
+
+Manifests em [`k8s/`](k8s/): **StatefulSet** (3 nós, disco por nó via
+`volumeClaimTemplates`), **headless Service** (DNS estável por pod, para os nós se
+acharem), **LoadBalancer** (RMI para clientes) e **PodDisruptionBudget** (mantém o
+quórum durante drains).
+
+```bash
+# 1) Construir a imagem e deixá-la acessível ao cluster
+docker build -t servidor-de-chaves:latest .
+#    minikube: minikube image load servidor-de-chaves:latest
+#    kind:     kind load docker-image servidor-de-chaves:latest
+
+# 2) Aplicar tudo
+kubectl apply -f k8s/
+
+# 3) Acompanhar a subida e a eleição de líder
+kubectl get pods -l app=servidor-chaves -w
+kubectl logs servidor-chaves-0 -f
+```
+
+**Mapeamento pod → nó:** o StatefulSet cria `servidor-chaves-0/-1/-2`; cada pod deriva
+seu id (`n1/n2/n3`) do ordinal e anuncia o próprio DNS. Os `RAFT_HOST_*` apontam para o
+DNS de cada pod (headless Service); `RMI_PORT`/`RAFT_PORT` uniformizam as portas (para o
+Service balancear).
+
+**Resiliência:** derrube um pod e veja o cluster reeleger e o pod voltar recuperando o
+estado do PVC:
+
+```bash
+kubectl delete pod servidor-chaves-0
+```
+
+**Acesso ao RMI:**
+- **Dentro do cluster** (recomendado): use o DNS de um pod, ex.
+  `servidor-chaves-0.servidor-chaves-hl:1099` — o `java.rmi.server.hostname` já é esse DNS.
+- **Externo (LoadBalancer):** `kubectl get svc servidor-chaves-rmi` dá o IP. Como o RMI
+  embute o hostname no stub, para o acesso externo o `java.rmi.server.hostname` precisa ser
+  o endereço do LB — sobrescreva via `JAVA_OPTS` no StatefulSet (limitação clássica de
+  RMI + NAT). É por isso que as escritas passarem pelo Raft ajuda: qualquer pod atende e
+  encaminha ao líder, então distribuir clientes entre pods é seguro.
+
+> Requer `replicas: 3` (a config conhece n1/n2/n3). Em minikube, `type: LoadBalancer`
+> precisa de `minikube tunnel`.
+
+---
+
 ## Interface RMI
 
 Objetos publicados no registry: **`RegistroChave`** e **`ConsultaChave`**.
