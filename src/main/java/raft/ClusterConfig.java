@@ -20,12 +20,14 @@ import org.apache.ratis.server.RaftServerConfigKeys;
 /**
  * Configuração estática do cluster de servidores de chaves.
  *
- * <p>Define, para cada nó, o endereço do transporte Raft (gRPC) e a porta do
- * registry RMI. Todos os nós compartilham o mesmo {@link RaftGroupId} — é isso
- * que os faz pertencer ao mesmo grupo de consenso.
+ * <p>Define, para cada nó, a porta do transporte Raft (gRPC) e a porta do registry
+ * RMI. Todos os nós compartilham o mesmo {@link RaftGroupId} — é isso que os faz
+ * pertencer ao mesmo grupo de consenso.
  *
- * <p>Para adicionar/remover nós ou mudar portas, edite os mapas abaixo. Todos os
- * nós precisam da mesma configuração.
+ * <p>O <b>host</b> de cada nó é 127.0.0.1 por padrão (execução local). Em Docker,
+ * onde cada nó é um container, defina as variáveis de ambiente
+ * {@code RAFT_HOST_N1}, {@code RAFT_HOST_N2}, {@code RAFT_HOST_N3} com os nomes dos
+ * serviços/containers para que os nós se encontrem pela DNS interna do Docker.
  */
 public final class ClusterConfig {
 
@@ -36,16 +38,16 @@ public final class ClusterConfig {
     public static final RaftGroupId GROUP_ID =
             RaftGroupId.valueOf(UUID.fromString("02511d47-d67c-49a3-9011-abb3109a44c1"));
 
-    /** id do nó -> endereço gRPC do Raft (host:porta). */
-    private static final Map<String, String> ENDERECO_RAFT = new LinkedHashMap<>();
+    /** id do nó -> porta do transporte Raft (gRPC). */
+    private static final Map<String, Integer> PORTA_RAFT = new LinkedHashMap<>();
 
     /** id do nó -> porta do registry RMI. */
     private static final Map<String, Integer> PORTA_RMI = new LinkedHashMap<>();
 
     static {
-        ENDERECO_RAFT.put("n1", "127.0.0.1:6001");
-        ENDERECO_RAFT.put("n2", "127.0.0.1:6002");
-        ENDERECO_RAFT.put("n3", "127.0.0.1:6003");
+        PORTA_RAFT.put("n1", 6001);
+        PORTA_RAFT.put("n2", 6002);
+        PORTA_RAFT.put("n3", 6003);
 
         PORTA_RMI.put("n1", 1099);
         PORTA_RMI.put("n2", 1100);
@@ -53,11 +55,11 @@ public final class ClusterConfig {
     }
 
     public static boolean noValido(String id) {
-        return ENDERECO_RAFT.containsKey(id);
+        return PORTA_RAFT.containsKey(id);
     }
 
     public static List<String> ids() {
-        return new ArrayList<>(ENDERECO_RAFT.keySet());
+        return new ArrayList<>(PORTA_RAFT.keySet());
     }
 
     public static int portaRmi(String id) {
@@ -69,13 +71,26 @@ public final class ClusterConfig {
         return new File("raft-storage", id);
     }
 
+    /**
+     * Host onde o nó {@code id} é alcançável pelos demais. Local: 127.0.0.1.
+     * Em Docker: defina RAFT_HOST_&lt;ID&gt; com o nome do serviço (ex.: n1).
+     */
+    private static String host(String id) {
+        String env = System.getenv("RAFT_HOST_" + id.toUpperCase());
+        return (env != null && !env.isBlank()) ? env.trim() : "127.0.0.1";
+    }
+
+    private static String enderecoRaft(String id) {
+        return host(id) + ":" + PORTA_RAFT.get(id);
+    }
+
     /** Constrói o grupo Raft com todos os peers configurados. */
     public static RaftGroup grupo() {
         List<RaftPeer> peers = new ArrayList<>();
-        for (Map.Entry<String, String> e : ENDERECO_RAFT.entrySet()) {
+        for (String id : PORTA_RAFT.keySet()) {
             peers.add(RaftPeer.newBuilder()
-                    .setId(e.getKey())
-                    .setAddress(e.getValue())
+                    .setId(id)
+                    .setAddress(enderecoRaft(id))
                     .build());
         }
         return RaftGroup.valueOf(GROUP_ID, peers);
@@ -86,7 +101,7 @@ public final class ClusterConfig {
         RaftProperties props = new RaftProperties();
 
         RaftConfigKeys.Rpc.setType(props, SupportedRpcType.GRPC);
-        GrpcConfigKeys.Server.setPort(props, portaRaft(id));
+        GrpcConfigKeys.Server.setPort(props, PORTA_RAFT.get(id));
 
         RaftServerConfigKeys.setStorageDir(props, Collections.singletonList(diretorioStorage(id)));
 
@@ -103,10 +118,5 @@ public final class ClusterConfig {
         RaftProperties props = new RaftProperties();
         RaftConfigKeys.Rpc.setType(props, SupportedRpcType.GRPC);
         return props;
-    }
-
-    private static int portaRaft(String id) {
-        String endereco = ENDERECO_RAFT.get(id);
-        return Integer.parseInt(endereco.substring(endereco.indexOf(':') + 1));
     }
 }

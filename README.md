@@ -153,6 +153,35 @@ Apagar essa pasta zera o estado do cluster.
 
 ---
 
+## Rodar com Docker
+
+O cluster inteiro sobe com Docker Compose (cada nó vira um container que acha os
+outros pela DNS interna da rede):
+
+```bash
+docker compose up --build      # sobe os 3 nós
+docker compose down            # derruba (dados preservados nos volumes)
+docker compose down -v         # derruba e apaga os dados
+```
+
+Ou um nó avulso:
+
+```bash
+docker build -t servidor-de-chaves .
+docker run --rm servidor-de-chaves n1
+```
+
+- Cada nó é um container e se encontra pelo nome do serviço (`n1`/`n2`/`n3`) — por
+  isso o compose define `RAFT_HOST_N1=n1`, `RAFT_HOST_N2=n2`, `RAFT_HOST_N3=n3`.
+  Fora do Docker o padrão continua `127.0.0.1`.
+- Log + snapshots ficam em volumes (`n1-data`/`n2-data`/`n3-data`), então os dados
+  sobrevivem ao `down`/`up`.
+- **RMI a partir do host:** as portas RMI são publicadas e o compose seta
+  `-Djava.rmi.server.hostname=localhost` para o acesso pelo host funcionar. Um
+  cliente RMI rodando **dentro** da rede Docker deve usar o nome do serviço no lookup.
+
+---
+
 ## Interface RMI
 
 Objetos publicados no registry: **`RegistroChave`** e **`ConsultaChave`**.

@@ -1,0 +1,59 @@
+# Cluster de 3 nós do servidor de chaves.
+#
+# Cada nó é um container; eles se encontram pelo nome do serviço (n1/n2/n3) via
+# a DNS interna do Docker — por isso os RAFT_HOST_* apontam para os nomes.
+# Todos os nós precisam do mapa completo (conhecem todos os peers).
+#
+#   docker compose up --build      # sobe o cluster (aguarda eleição de líder)
+#   docker compose down            # derruba (volumes preservam os dados)
+#   docker compose down -v         # derruba e apaga os dados
+
+x-node-env: &node-env
+  RAFT_HOST_N1: n1
+  RAFT_HOST_N2: n2
+  RAFT_HOST_N3: n3
+  # Para acessar o RMI a partir do host (via portas publicadas abaixo).
+  # Clientes RMI DENTRO da rede devem usar o nome do serviço no lugar de localhost.
+  JAVA_OPTS: -Djava.rmi.server.hostname=localhost
+
+services:
+  n1:
+    build: .
+    image: servidor-de-chaves
+    command: ["n1"]
+    environment: *node-env
+    ports:
+      - "1099:1099"   # RMI do n1
+    volumes:
+      - n1-data:/app/raft-storage
+    networks: [raft]
+
+  n2:
+    build: .
+    image: servidor-de-chaves
+    command: ["n2"]
+    environment: *node-env
+    ports:
+      - "1100:1100"   # RMI do n2
+    volumes:
+      - n2-data:/app/raft-storage
+    networks: [raft]
+
+  n3:
+    build: .
+    image: servidor-de-chaves
+    command: ["n3"]
+    environment: *node-env
+    ports:
+      - "1101:1101"   # RMI do n3
+    volumes:
+      - n3-data:/app/raft-storage
+    networks: [raft]
+
+volumes:
+  n1-data:
+  n2-data:
+  n3-data:
+
+networks:
+  raft:
