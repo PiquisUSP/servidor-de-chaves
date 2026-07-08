@@ -15,7 +15,7 @@ COPY src ./src
 RUN mvn -q -B -DskipTests clean package dependency:copy-dependencies -DincludeScope=runtime
 
 # ---------- Estágio de runtime ----------
-FROM amazoncorretto:21-alpine AS runtime
+FROM amazoncorretto:21 AS runtime
 WORKDIR /app
 
 # Classes da aplicação + dependências (Ratis, gRPC, SLF4J, ...)
