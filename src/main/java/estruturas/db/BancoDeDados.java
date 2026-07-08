@@ -9,7 +9,7 @@ import estruturas.db.exceptions.chave.ChaveJaRegistrada;
 
 public class BancoDeDados {
     // Indexado pelo VALOR da chave (String), e não pelo objeto Chave: a igualdade
-    // de Chave depende da classe concreta, e no PIX a chave é única pelo valor —
+    // de Chave depende da classe concreta, e no PIQUIS a chave é única pelo valor —
     // assim registro e consulta ficam O(1).
     private final ConcurrentHashMap<String, ContaBancaria> contasBancarias = new ConcurrentHashMap<>();
 
