@@ -1,6 +1,6 @@
 # Servidor de Chaves (PIQUIS) com Raft
 
-Servidor de chaves no estilo **PIQUIS**: mapeia uma **chave** (CPF, telefone, e-mail ou
+Servidor de chaves do **PIQUIS**: mapeia uma **chave** (CPF, telefone, e-mail ou
 aleatória) para uma **conta bancária**. As instituições conversam com o servidor por
 **RMI**; por baixo, os servidores formam um **cluster replicado com consenso Raft**
 (via [Apache Ratis](https://ratis.apache.org/)), de modo que um registro feito em
