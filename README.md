@@ -4,7 +4,7 @@ Servidor de chaves no estilo **PIQUIS**: mapeia uma **chave** (CPF, telefone, e-
 aleatória) para uma **conta bancária**. As instituições conversam com o servidor por
 **RMI**; por baixo, os servidores formam um **cluster replicado com consenso Raft**
 (via [Apache Ratis](https://ratis.apache.org/)), de modo que um registro feito em
-qualquer nó é replicado e sobrevive à queda de nós.
+qualquer nó é replicado, sobrevive à queda de nós e persiste em disco.
 
 ---
 
@@ -52,6 +52,21 @@ o dado registrado em um nó fica visível nas consultas de qualquer outro.
 
 ---
 
+## Persistência em disco
+
+O estado sobrevive à queda/reinício dos nós:
+
+- **Log do Raft** — cada entrada é gravada em `raft-storage/<id>/` antes do commit (o Ratis faz isso).
+- **Snapshots da StateMachine** — a cada 10 entradas aplicadas, `takeSnapshot()` grava o
+  estado do `BancoDeDados` em disco (serializado) e o log pode ser compactado.
+- **Recuperação no restart** — ao subir, o nó **recupera** (`RECOVER`) o estado do snapshot
+  mais recente e reproduz o resto do log; na primeira vez, **formata** (`FORMAT`).
+
+Resultado: derrubar o cluster inteiro e reiniciar recupera todos os registros do disco,
+sem reescrever nada. (Ver `RaftPersistenciaTest`.)
+
+---
+
 ## Estrutura do projeto
 
 ```
@@ -59,8 +74,8 @@ src/main/java/
 ├── Main.java                      # sobe um nó: Raft + registry RMI
 ├── raft/                          # integração com Apache Ratis
 │   ├── NoServidorChaves.java      #   bootstrap do nó (RaftServer + RaftClient + banco)
-│   ├── ClusterConfig.java         #   peers, portas e id do grupo
-│   ├── ServidorChavesStateMachine #   máquina de estados replicada (aplica no BancoDeDados)
+│   ├── ClusterConfig.java         #   peers, portas, id do grupo e storage
+│   ├── ServidorChavesStateMachine #   máquina de estados replicada (aplica no banco + snapshots)
 │   ├── ComandoRegistro.java       #   comando serializável que viaja no log Raft
 │   ├── TipoChave.java             #   enum do tipo da chave (CPF/TELEFONE/EMAIL/ALEATORIA)
 │   ├── AplicadorDeChaves.java     #   abstração da escrita (local vs. Raft)
@@ -133,8 +148,8 @@ Cada nó é um processo. Abra **um terminal por nó** e passe o id (`n1`, `n2`, 
 | n2  | 1100 | 6002        |
 | n3  | 1101 | 6003        |
 
-Os dados do Raft ficam em `raft-storage/<id>/` (ignorado pelo Git). Apagar essa pasta
-zera o estado do cluster.
+Os dados do Raft (log + snapshots) ficam em `raft-storage/<id>/` (ignorado pelo Git).
+Apagar essa pasta zera o estado do cluster.
 
 ---
 
@@ -189,6 +204,7 @@ precisam da mesma configuração** e compartilhar o mesmo `GROUP_ID`.
 | `rmi.services.ConsultaChaveServiceTest` | Busca por valor (qualquer tipo) e serialização do resultado |
 | `raft.RaftClusterIntegrationTest` | Cluster de 3 nós: replicação de escrita e leitura ponta a ponta em outro nó |
 | `raft.RaftToleranciaFalhaTest` | **Derrubar nós**: reeleição de líder, disponibilidade com maioria, não perder dado commitado e recusar escrita sem maioria |
+| `raft.RaftPersistenciaTest` | **Restart total**: escrever, derrubar todos os nós e reiniciar — dados recuperados do disco |
 
 ---
 
@@ -200,5 +216,5 @@ precisam da mesma configuração** e compartilhar o mesmo `GROUP_ID`.
   registro e consulta O(1); a chave é única pelo valor (independe do tipo).
 - **Determinismo** — valores aleatórios (o UUID da chave aleatória) são gerados **antes**
   de o comando entrar no log, para todos os nós aplicarem exatamente o mesmo valor.
-- **Sem snapshots** — o log é reproduzido do início ao reiniciar. Suficiente para o
-  cenário atual; para logs grandes, implementar `takeSnapshot()` na StateMachine.
+- **Persistência** — log do Raft em disco + snapshots da StateMachine; `RECOVER` no
+  restart, `FORMAT` na primeira vez.
