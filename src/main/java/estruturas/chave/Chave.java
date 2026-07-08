@@ -1,6 +1,10 @@
 package estruturas.chave;
 
-public abstract class Chave {
+import java.io.Serializable;
+
+public class Chave implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     protected String valor;
 
     public Chave(String valor) {

@@ -1,13 +1,13 @@
 package estruturas.instituicao;
 
 public class IdentificadorInstituicao {
-    protected Integer valor;
+    protected String valor;
 
-    public IdentificadorInstituicao(Integer valor) {
+    public IdentificadorInstituicao(String valor) {
         this.valor = valor;
     }
 
-    public Integer getValor() {
+    public String getValor() {
         return this.valor;
     }
 

@@ -13,6 +13,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.11.3</junit.version>
+        <ratis.version>3.2.2</ratis.version>
     </properties>
 
     <dependencies>
@@ -23,6 +24,34 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Apache Ratis: implementacao do consenso Raft -->
+        <!-- ratis-server: motor do Raft (log, eleicao, replicacao, StateMachine) -->
+        <dependency>
+            <groupId>org.apache.ratis</groupId>
+            <artifactId>ratis-server</artifactId>
+            <version>${ratis.version}</version>
+        </dependency>
+        <!-- ratis-client: usado pelos servicos RMI para submeter comandos ao grupo Raft -->
+        <dependency>
+            <groupId>org.apache.ratis</groupId>
+            <artifactId>ratis-client</artifactId>
+            <version>${ratis.version}</version>
+        </dependency>
+        <!-- ratis-grpc: transporte de rede entre os nos do cluster -->
+        <dependency>
+            <groupId>org.apache.ratis</groupId>
+            <artifactId>ratis-grpc</artifactId>
+            <version>${ratis.version}</version>
+        </dependency>
+
+        <!-- Binding SLF4J para visualizar os logs do Raft (eleicao de lider, etc.) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.16</version>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -32,6 +61,18 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
+            </plugin>
+
+            <!-- Permite iniciar um no do cluster com:
+                 mvnw exec:java -Dexec.args="n1" -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <mainClass>Main</mainClass>
+                    <classpathScope>runtime</classpathScope>
+                </configuration>
             </plugin>
         </plugins>
     </build>

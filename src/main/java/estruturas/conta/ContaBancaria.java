@@ -18,7 +18,7 @@ public class ContaBancaria {
         if (obj == null || getClass() != obj.getClass()) return false;
 
         ContaBancaria outra = (ContaBancaria) obj;
-        return this.id.equals(id) && this.numeroConta.equals(numeroConta);
+        return this.id.equals(outra.id) && this.numeroConta.equals(outra.numeroConta);
     }
 
     @Override
