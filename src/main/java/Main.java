@@ -27,6 +27,10 @@ public class Main {
     public static void main(String[] args) {
         String id = args.length > 0 ? args[0] : "n1";
 
+        // (a) Limita as threads de conexão do RMI (o "acceptor"); o processamento
+        // pesado vai para o PoolDeTrabalho de cada serviço (fila + workers, spec 2.2).
+        System.setProperty("sun.rmi.transport.tcp.maxConnectionThreads", "100");
+
         try {
             System.out.println("Carregando servidor megabrain. Força total 🧠");
 
