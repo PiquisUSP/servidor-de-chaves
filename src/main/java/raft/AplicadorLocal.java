@@ -18,9 +18,13 @@ public class AplicadorLocal implements AplicadorDeChaves {
     }
 
     @Override
-    public int registrar(ComandoRegistro comando) {
+    public int aplicar(Comando comando) {
         try {
-            db.AdicionarContaBancaria(comando.reconstruirChave(), comando.reconstruirConta());
+            if (comando instanceof ComandoAtualizacao) {
+                db.AtualizarContaBancaria(comando.reconstruirChave(), comando.reconstruirConta());
+            } else {
+                db.AdicionarContaBancaria(comando.reconstruirChave(), comando.reconstruirConta());
+            }
             return 200;
         } catch (ChaveJaRegistrada e) {
             return 403;

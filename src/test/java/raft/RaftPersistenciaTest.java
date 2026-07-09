@@ -55,7 +55,7 @@ class RaftPersistenciaTest {
 
         for (int i = 0; i < chaves.size(); i++) {
             int status = ger1.get(i % ger1.size()).aplicador()
-                    .registrar(new ComandoRegistro(TipoChave.EMAIL, chaves.get(i), "1", "0001"));
+                    .aplicar(new ComandoRegistro(TipoChave.EMAIL, chaves.get(i), "1", "0001"));
             assertEquals(200, status, "deveria registrar " + chaves.get(i));
         }
         for (String chave : chaves) {

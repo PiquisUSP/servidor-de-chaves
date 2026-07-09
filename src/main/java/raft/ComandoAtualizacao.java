@@ -10,18 +10,11 @@ import estruturas.conta.NumeroConta;
 import estruturas.instituicao.IdentificadorInstituicao;
 
 /**
- * Registro de uma chave nova (falha se a chave já existir).
- *
- * <p>Guarda apenas dados primitivos (tipo + strings), nunca objetos {@code Chave}
- * ou {@code ContaBancaria} — assim a serialização é estável e a reconstrução em
- * cada nó é determinística.
- *
- * <p><b>Determinismo:</b> valores potencialmente aleatórios (ex.: o UUID de uma
- * {@link ChaveAleatoria}) já vêm resolvidos aqui, gerados <i>antes</i> do comando
- * entrar no log. A StateMachine nunca gera valores novos — apenas reaplica o que
- * está registrado —, garantindo que todos os nós cheguem ao mesmo estado.
+ * Portabilidade de uma chave existente: ela passa a apontar para a conta deste
+ * comando, sobrescrevendo o mapeamento anterior. Mesmo formato primitivo e
+ * determinístico do {@link ComandoRegistro}.
  */
-public final class ComandoRegistro implements Comando {
+public final class ComandoAtualizacao implements Comando {
 
     private static final long serialVersionUID = 1L;
 
@@ -30,7 +23,7 @@ public final class ComandoRegistro implements Comando {
     private final String idInstituicao;
     private final String numeroConta;
 
-    public ComandoRegistro(TipoChave tipo, String valorChave, String idInstituicao, String numeroConta) {
+    public ComandoAtualizacao(TipoChave tipo, String valorChave, String idInstituicao, String numeroConta) {
         this.tipo = tipo;
         this.valorChave = valorChave;
         this.idInstituicao = idInstituicao;
@@ -62,7 +55,7 @@ public final class ComandoRegistro implements Comando {
 
     @Override
     public String toString() {
-        return "ComandoRegistro{tipo=" + tipo + ", chave=" + valorChave
+        return "ComandoAtualizacao{tipo=" + tipo + ", chave=" + valorChave
                 + ", instituicao=" + idInstituicao + ", conta=" + numeroConta + "}";
     }
 }

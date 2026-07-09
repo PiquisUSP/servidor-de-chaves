@@ -67,7 +67,7 @@ class RaftClusterIntegrationTest {
 
         // 1) Submete pelo n1: o RaftClient acha o líder, replica para a maioria e
         //    só retorna após o commit. 200 = registrado.
-        int status = n1.aplicador().registrar(comando);
+        int status = n1.aplicador().aplicar(comando);
         assertEquals(200, status, "o registro deveria ser confirmado pelo consenso");
 
         // 2) Cada nó aplica a entrada commitada na sua própria cópia do banco.
@@ -80,7 +80,7 @@ class RaftClusterIntegrationTest {
         // 3) Registrar a mesma chave de novo — submetendo por OUTRO nó (n2), para
         //    exercitar o redirecionamento ao líder — deve dar 403, decidido de
         //    forma determinística sobre o estado já replicado.
-        int duplicata = n2.aplicador().registrar(comando);
+        int duplicata = n2.aplicador().aplicar(comando);
         assertEquals(403, duplicata, "a chave já existe no estado replicado");
 
         // 4) Leitura ponta a ponta: consultar pelo n3 (nó diferente do que

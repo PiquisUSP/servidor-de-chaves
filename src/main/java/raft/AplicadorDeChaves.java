@@ -16,9 +16,9 @@ package raft;
 public interface AplicadorDeChaves {
 
     /**
-     * Registra a chave/conta descrita pelo comando.
+     * Aplica o comando (registro ou atualização de chave).
      *
-     * @return 200 se registrou, 403 se a chave já existia, 500 em falha inesperada.
+     * @return 200 se aplicou, 403 se a chave já existia (registro), 500 em falha inesperada.
      */
-    int registrar(ComandoRegistro comando);
+    int aplicar(Comando comando);
 }

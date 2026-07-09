@@ -128,7 +128,7 @@ class RaftToleranciaFalhaTest {
     // ------------------------------------------------------------------
 
     private static int registrar(NoServidorChaves no, String email) {
-        return no.aplicador().registrar(new ComandoRegistro(TipoChave.EMAIL, email, "1", "0001"));
+        return no.aplicador().aplicar(new ComandoRegistro(TipoChave.EMAIL, email, "1", "0001"));
     }
 
     private static NoServidorChaves esperarLider(List<NoServidorChaves> candidatos, long timeoutMs)

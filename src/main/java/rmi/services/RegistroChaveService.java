@@ -11,6 +11,7 @@ import estruturas.chave.ChaveTelefone;
 
 import raft.AplicadorDeChaves;
 import raft.AplicadorLocal;
+import raft.ComandoAtualizacao;
 import raft.ComandoRegistro;
 import raft.TipoChave;
 
@@ -58,7 +59,7 @@ public class RegistroChaveService extends UnicastRemoteObject implements Registr
             ChaveCPF chave = new ChaveCPF(cpf); // valida (pode lançar -> 500)
             ComandoRegistro comando =
                     new ComandoRegistro(TipoChave.CPF, chave.getValor(), idInstituicao, numeroConta);
-            return aplicador.registrar(comando);
+            return aplicador.aplicar(comando);
         } catch (Exception e) {
             return 500;
         }
@@ -70,7 +71,7 @@ public class RegistroChaveService extends UnicastRemoteObject implements Registr
             ChaveTelefone chave = new ChaveTelefone(telefone);
             ComandoRegistro comando =
                     new ComandoRegistro(TipoChave.TELEFONE, chave.getValor(), idInstituicao, numeroConta);
-            return aplicador.registrar(comando);
+            return aplicador.aplicar(comando);
         } catch (Exception e) {
             return 500;
         }
@@ -82,7 +83,7 @@ public class RegistroChaveService extends UnicastRemoteObject implements Registr
             ChaveEmail chave = new ChaveEmail(email);
             ComandoRegistro comando =
                     new ComandoRegistro(TipoChave.EMAIL, chave.getValor(), idInstituicao, numeroConta);
-            return aplicador.registrar(comando);
+            return aplicador.aplicar(comando);
         } catch (Exception e) {
             return 500;
         }
@@ -96,7 +97,26 @@ public class RegistroChaveService extends UnicastRemoteObject implements Registr
             ChaveAleatoria chave = new ChaveAleatoria();
             ComandoRegistro comando =
                     new ComandoRegistro(TipoChave.ALEATORIA, chave.getValor(), idInstituicao, numeroConta);
-            return aplicador.registrar(comando);
+            return aplicador.aplicar(comando);
+        } catch (Exception e) {
+            return 500;
+        }
+    }
+
+    @Override
+    public int atualizarChave(String tipo, String idInstituicao, String numeroConta, String valor) throws RemoteException {
+        try {
+            TipoChave t = TipoChave.valueOf(tipo);
+            // Revalida o valor construindo a chave do tipo certo (inválida -> 500).
+            var chave = switch (t) {
+                case CPF -> new ChaveCPF(valor);
+                case TELEFONE -> new ChaveTelefone(valor);
+                case EMAIL -> new ChaveEmail(valor);
+                case ALEATORIA -> new ChaveAleatoria(valor);
+            };
+            ComandoAtualizacao comando =
+                    new ComandoAtualizacao(t, chave.getValor(), idInstituicao, numeroConta);
+            return aplicador.aplicar(comando);
         } catch (Exception e) {
             return 500;
         }

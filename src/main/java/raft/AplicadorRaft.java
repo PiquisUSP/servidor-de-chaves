@@ -25,7 +25,7 @@ public class AplicadorRaft implements AplicadorDeChaves {
     }
 
     @Override
-    public int registrar(ComandoRegistro comando) {
+    public int aplicar(Comando comando) {
         try {
             // send() = escrita: vira entrada no log, é replicada e commitada
             // pela maioria antes de retornar.

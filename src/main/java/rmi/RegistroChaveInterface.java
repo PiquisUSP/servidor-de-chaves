@@ -11,4 +11,5 @@ public interface RegistroChaveInterface extends Remote {
     public int registrarChaveTelefone(String idInstituicao, String numeroConta, String telefone) throws RemoteException;
     public int registrarChaveEmail(String idInstituicao, String numeroConta, String email) throws RemoteException;
     public int registrarChaveAleatoria(String idInstituicao, String numeroConta) throws RemoteException;
+    public int atualizarChave(String tipo, String idInstituicao, String numeroConta, String valor) throws RemoteException;
 }

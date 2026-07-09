@@ -28,6 +28,10 @@ public class BancoDeDados {
         this.contasBancarias.put(chave.getValor(), contaBancaria);
     }
 
+    public void AtualizarContaBancaria(Chave chave, ContaBancaria contaBancaria) {
+        this.contasBancarias.put(chave.getValor(), contaBancaria);
+    }
+
     public ContaBancaria RecuperarContaBancaria(Chave chave) {
         if (chave == null || chave.getValor() == null) {
             return null;

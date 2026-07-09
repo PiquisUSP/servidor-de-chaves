@@ -120,12 +120,16 @@ public class ServidorChavesStateMachine extends BaseStateMachine {
         final String dados = entry.getStateMachineLogEntry().getLogData().toStringUtf8();
 
         int status;
-        ComandoRegistro comando = null;
+        Comando comando = null;
         try {
-            comando = ComandoRegistro.desserializar(dados);
+            comando = Comando.desserializar(dados);
             Chave chave = comando.reconstruirChave();
             ContaBancaria conta = comando.reconstruirConta();
-            db.AdicionarContaBancaria(chave, conta);
+            if (comando instanceof ComandoAtualizacao) {
+                db.AtualizarContaBancaria(chave, conta);
+            } else {
+                db.AdicionarContaBancaria(chave, conta);
+            }
             status = 200;
         } catch (ChaveJaRegistrada e) {
             status = 403;
