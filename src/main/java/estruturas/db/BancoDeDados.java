@@ -3,13 +3,19 @@ package estruturas.db;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import estruturas.chave.Chave;
 import estruturas.conta.ContaBancaria;
 import estruturas.db.exceptions.chave.ChaveJaRegistrada;
 
 public class BancoDeDados {
+    private static final Logger LOG = LoggerFactory.getLogger(BancoDeDados.class);
+
     // Indexado pelo VALOR da chave (String), e não pelo objeto Chave: a igualdade
-    // de Chave depende da classe concreta, e no PIX a chave é única pelo valor —
+    // de Chave depende da classe concreta, e no PIQUIS a chave é única pelo valor —
     // assim registro e consulta ficam O(1).
     private final ConcurrentHashMap<String, ContaBancaria> contasBancarias = new ConcurrentHashMap<>();
 
@@ -26,6 +32,8 @@ public class BancoDeDados {
             throw new ChaveJaRegistrada();
         }
         this.contasBancarias.put(chave.getValor(), contaBancaria);
+        LOG.info("[DB] chave registrada valor={} (total de chaves={})",
+                chave.getValor(), this.contasBancarias.size());
     }
 
     public void AtualizarContaBancaria(Chave chave, ContaBancaria contaBancaria) {
