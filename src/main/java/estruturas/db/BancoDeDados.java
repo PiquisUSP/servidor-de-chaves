@@ -1,6 +1,8 @@
 package estruturas.db;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -9,7 +11,9 @@ import org.slf4j.LoggerFactory;
 
 import estruturas.chave.Chave;
 import estruturas.conta.ContaBancaria;
+import estruturas.conta.NumeroConta;
 import estruturas.db.exceptions.chave.ChaveJaRegistrada;
+import estruturas.instituicao.IdentificadorInstituicao;
 
 public class BancoDeDados {
     private static final Logger LOG = LoggerFactory.getLogger(BancoDeDados.class);
@@ -57,6 +61,20 @@ public class BancoDeDados {
 
     public boolean ExisteChaveRegistrada(String valor) {
         return valor != null && this.contasBancarias.containsKey(valor);
+    }
+
+    // Reverse-lookup: todas as chaves que apontam para uma conta. Varre o mapa (o
+    // índice é por valor de chave), o que basta para a quantidade de chaves aqui.
+    public List<String> chavesDaConta(String idInstituicao, String numeroConta) {
+        ContaBancaria alvo = new ContaBancaria(
+                new IdentificadorInstituicao(idInstituicao), new NumeroConta(numeroConta));
+        List<String> chaves = new ArrayList<>();
+        for (Map.Entry<String, ContaBancaria> e : this.contasBancarias.entrySet()) {
+            if (alvo.equals(e.getValue())) {
+                chaves.add(e.getKey());
+            }
+        }
+        return chaves;
     }
 
     // --- Suporte a snapshot (persistência do estado da StateMachine em disco) ---

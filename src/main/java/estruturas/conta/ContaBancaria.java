@@ -17,6 +17,14 @@ public class ContaBancaria implements Serializable {
         this.numeroConta = numeroConta;
     }
 
+    public IdentificadorInstituicao getIdInstituicao() {
+        return id;
+    }
+
+    public NumeroConta getNumeroConta() {
+        return numeroConta;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
